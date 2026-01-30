@@ -16,24 +16,38 @@ for itemName, tintId in pairs(TintMappings) do
         local Player = QBCore.Functions.GetPlayer(source)
         if not Player then return end
 
-        TriggerClientEvent('qb-weapontints:client:ApplyTint', source, tintId, itemName)
+        local weaponSlot = nil
+        local inventory = exports.ox_inventory:GetInventory(source)
+
+        if inventory and inventory.items then
+            for slot, invItem in pairs(inventory.items) do
+                if invItem and invItem.name and invItem.name:find("WEAPON_") then
+                    weaponSlot = slot
+                    break
+                end
+            end
+        end
+
+        if not weaponSlot then
+            TriggerClientEvent('QBCore:Notify', source, 'You need to have a weapon equipped!', 'error')
+            return
+        end
+
+        local hasTintItem = exports.ox_inventory:Search(source, 'count', itemName)
+        if not hasTintItem or hasTintItem < 1 then
+            return
+        end
+
+        local weaponItem = exports.ox_inventory:GetSlot(source, weaponSlot)
+        if weaponItem then
+            local metadata = weaponItem.metadata or {}
+            metadata.tint = tintId
+
+            exports.ox_inventory:SetMetadata(source, weaponSlot, metadata)
+            exports.ox_inventory:RemoveItem(source, itemName, 1)
+
+            TriggerClientEvent('qb-weapontints:client:ApplyTintVisual', source, tintId)
+            TriggerClientEvent('QBCore:Notify', source, 'Weapon tint applied!', 'success')
+        end
     end)
 end
-
-RegisterNetEvent('qb-weapontints:server:UpdateWeaponTint', function(weaponSlot, tintId)
-    local src = source
-
-    local weaponItem = exports.ox_inventory:GetSlot(src, weaponSlot)
-
-    if weaponItem then
-        local metadata = weaponItem.metadata or {}
-        metadata.tint = tintId
-
-        exports.ox_inventory:SetMetadata(src, weaponSlot, metadata)
-    end
-end)
-
-RegisterNetEvent('qb-weapontints:server:RemoveTintItem', function(itemName)
-    local src = source
-    exports.ox_inventory:RemoveItem(src, itemName, 1)
-end)

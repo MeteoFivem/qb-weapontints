@@ -1,33 +1,31 @@
 -- https://github.com/MeteoFivem/qb-weapontints
-local QBCore = exports['qb-core']:GetCoreObject()
 
-RegisterNetEvent('qb-weapontints:client:ApplyTint', function(tintId, itemName)
-    local ped = PlayerPedId()
-    local currentWeapon = GetSelectedPedWeapon(ped)
+local TintMappings = {
+    [0] = 'weapontint_black',   -- Normal/Default
+    [1] = 'weapontint_green',   -- Green
+    [2] = 'weapontint_gold',    -- Gold
+    [3] = 'weapontint_pink',    -- Pink
+    [4] = 'weapontint_army',    -- Army
+    [5] = 'weapontint_lspd',    -- LSPD
+    [6] = 'weapontint_orange',  -- Orange
+    [7] = 'weapontint_plat',    -- Platinum
+}
 
-    if currentWeapon == nil or currentWeapon == `WEAPON_UNARMED` then
-        QBCore.Functions.Notify('You need to have a weapon equipped!', 'error')
-        return
-    end
+RegisterNetEvent('qb-weapontints:client:ApplyTintVisual', function(tintId)
+    local tintItemName = TintMappings[tintId]
+    if not tintItemName then return end
+
+    local hasTintItem = exports.ox_inventory:Search('count', tintItemName) > 0
+    if not hasTintItem then return end
 
     local weaponData = exports.ox_inventory:getCurrentWeapon()
+    if not weaponData then return end
 
-    if not weaponData then
-        QBCore.Functions.Notify('No weapon equipped!', 'error')
-        return
+    local ped = PlayerPedId()
+    local weaponHash = GetHashKey(weaponData.name)
+
+    -- add compatibility and live update
+    if weaponHash and weaponHash ~= `WEAPON_UNARMED` then
+        SetPedWeaponTintIndex(ped, weaponHash, tintId)
     end
-
-    SetPedWeaponTintIndex(ped, currentWeapon, tintId)
-
-    local weaponSlot = weaponData.slot
-    if weaponSlot then
-        local metadata = weaponData.metadata or {}
-        metadata.tint = tintId
-
-        TriggerServerEvent('qb-weapontints:server:UpdateWeaponTint', weaponSlot, tintId)
-    end
-
-    TriggerServerEvent('qb-weapontints:server:RemoveTintItem', itemName)
-
-    QBCore.Functions.Notify('Weapon tint applied!', 'success')
 end)
